@@ -493,7 +493,23 @@ public class ChooserBrowseFragment extends Fragment
                     PackageInfo pi = pm.getPackageInfo(path, 0);
                     final Context themeContext = context.createPackageContext(path,
                             Context.CONTEXT_IGNORE_SECURITY);
+                    if (themeContext == null) {
+                        Log.e(TAG+".LoadImage", "themeContext is null while loading preview for "+pkgName);
+                        return null;
+                    }
                     final Resources res = themeContext.getResources();
+                    if (pi == null) {
+                        Log.e(TAG+".LoadImage", "pi is null while loading preview for "+pkgName);
+                        return null;
+                    }
+                    if (pi.legacyThemeInfos == null) {
+                        Log.e(TAG+".LoadImage", "pi.legacyThemeInfos is null while loading preview for "+pkgName+" -- isn't this a legacy theme?!");
+                        return null;
+                    }
+                    if (pi.legacyThemeInfos.length == 0) {
+                        Log.e(TAG+".LoadImage", "pi.legacyThemeInfos is empty while loading preview for "+pkgName);
+                        return null;
+                    }
                     final int resId = showWallpaper ? pi.legacyThemeInfos[0].wallpaperResourceId :
                             pi.legacyThemeInfos[0].previewResourceId;
                     bitmap = Utils.decodeResource(res, resId, mMaxImageSize.x, mMaxImageSize.y);
