@@ -110,8 +110,6 @@ public class WallpaperAndIconPreviewFragment extends Fragment
         mIsLegacyTheme = getArguments().getBoolean(LEGACY_THEME_EXTRA);
         mHasIcons = getArguments().getBoolean(HAS_ICONS_EXTRA);
         mPkgName = getArguments().getString(PKGNAME_EXTRA);
-
-        getIconComponents(getActivity());
     }
 
     @Override
@@ -136,38 +134,6 @@ public class WallpaperAndIconPreviewFragment extends Fragment
     public void onStart() {
         super.onStart();
 
-    }
-
-    public static ComponentName[] getIconComponents(Context context) {
-
-        if (sIconComponents == null || sIconComponents.length == 0) {
-            sIconComponents = new ComponentName[]{COMPONENT_DIALER, COMPONENT_MESSAGING,
-                    COMPONENT_CAMERA, COMPONENT_BROWSER};
-
-            PackageManager pm = context.getPackageManager();
-
-            // if device does not have telephony replace dialer and mms
-            if (!pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
-                sIconComponents[0] = COMPONENT_CALENDAR;
-                sIconComponents[1] = COMPONENT_GALERY;
-            }
-
-            if (!pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
-                sIconComponents[2] = COMPONENT_SETTINGS;
-            } else {
-                // decide on which camera icon to use
-                try {
-                    if (pm.getPackageInfo(CAMERA_NEXT_PACKAGE, 0) != null) {
-                        sIconComponents[2] = COMPONENT_CAMERANEXT;
-                    }
-                } catch (NameNotFoundException e) {
-                    // default to COMPONENT_CAMERA
-                }
-            }
-
-        }
-
-        return sIconComponents;
     }
 
     private final LoaderCallbacks<Bitmap> mImageCallbacks = new LoaderCallbacks<Bitmap>() {
