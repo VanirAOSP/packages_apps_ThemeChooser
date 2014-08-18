@@ -560,8 +560,7 @@ public class ChooserBrowseFragment extends Fragment
             List<IconInfo> icons = new ArrayList<IconInfo>();
             IconPreviewHelper helper = new IconPreviewHelper(mContext, mPkgName);
 
-            for (ComponentName component
-                    : WallpaperAndIconPreviewFragment.getIconComponents(mContext)) {
+            for (ComponentName component : WallpaperAndIconPreviewFragment.ICON_COMPONENTS) {
                 Drawable icon = helper.getIcon(component);
                 IconInfo info = new IconInfo(null, icon);
                 icons.add(info);

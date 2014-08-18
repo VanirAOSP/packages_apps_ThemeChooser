@@ -72,9 +72,7 @@ public class WallpaperAndIconPreviewFragment extends Fragment
     private static final ComponentName COMPONENT_GALERY =
             new ComponentName("com.android.gallery3d", "com.android.gallery3d.app.GalleryActivity");
 
-    private static final String CAMERA_NEXT_PACKAGE = "com.cyngn.cameranext";
-
-    private static ComponentName[] sIconComponents;
+   public static final ComponentName[] ICON_COMPONENTS = { COMPONENT_DIALER, COMPONENT_MESSAGING, COMPONENT_CAMERANEXT, COMPONENT_CAMERA, COMPONENT_BROWSER, COMPONENT_SETTINGS, COMPONENT_CALENDAR, COMPONENT_GALERY };
 
     private static final String PKGNAME_EXTRA = "pkgname";
     private static final String IMAGE_DATA_EXTRA = "url";
@@ -110,8 +108,6 @@ public class WallpaperAndIconPreviewFragment extends Fragment
         mIsLegacyTheme = getArguments().getBoolean(LEGACY_THEME_EXTRA);
         mHasIcons = getArguments().getBoolean(HAS_ICONS_EXTRA);
         mPkgName = getArguments().getString(PKGNAME_EXTRA);
-
-        getIconComponents(getActivity());
     }
 
     @Override
@@ -136,38 +132,6 @@ public class WallpaperAndIconPreviewFragment extends Fragment
     public void onStart() {
         super.onStart();
 
-    }
-
-    public static ComponentName[] getIconComponents(Context context) {
-
-        if (sIconComponents == null || sIconComponents.length == 0) {
-            sIconComponents = new ComponentName[]{COMPONENT_DIALER, COMPONENT_MESSAGING,
-                    COMPONENT_CAMERA, COMPONENT_BROWSER};
-
-            PackageManager pm = context.getPackageManager();
-
-            // if device does not have telephony replace dialer and mms
-            if (!pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY)) {
-                sIconComponents[0] = COMPONENT_CALENDAR;
-                sIconComponents[1] = COMPONENT_GALERY;
-            }
-
-            if (!pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
-                sIconComponents[2] = COMPONENT_SETTINGS;
-            } else {
-                // decide on which camera icon to use
-                try {
-                    if (pm.getPackageInfo(CAMERA_NEXT_PACKAGE, 0) != null) {
-                        sIconComponents[2] = COMPONENT_CAMERANEXT;
-                    }
-                } catch (NameNotFoundException e) {
-                    // default to COMPONENT_CAMERA
-                }
-            }
-
-        }
-
-        return sIconComponents;
     }
 
     private final LoaderCallbacks<Bitmap> mImageCallbacks = new LoaderCallbacks<Bitmap>() {
@@ -315,7 +279,7 @@ public class WallpaperAndIconPreviewFragment extends Fragment
             List<IconInfo> icons = new ArrayList<IconInfo>();
             IconPreviewHelper helper = new IconPreviewHelper(getContext(), mPkgName);
 
-            for (ComponentName component : sIconComponents) {
+            for (ComponentName component : ICON_COMPONENTS) {
                 Drawable icon = helper.getIcon(component);
                 String label = helper.getLabel(component);
                 IconInfo info = new IconInfo(label, icon);
