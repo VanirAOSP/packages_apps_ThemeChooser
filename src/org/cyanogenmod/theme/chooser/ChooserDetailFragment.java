@@ -46,11 +46,13 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.viewpagerindicator.CirclePageIndicator;
 
 import org.cyanogenmod.theme.util.ChooserDetailScrollView;
+import org.cyanogenmod.theme.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,6 +105,7 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
 
     private Handler mHandler;
     private Cursor mAppliedThemeCursor;
+    private List<String> mAppliedComponents = new ArrayList<String>();
     private HashMap<String, CheckBox> mComponentToCheckbox = new HashMap<String, CheckBox>();
 
     private boolean mLoadInitialCheckboxStates = true;
@@ -117,6 +120,8 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
 
     static {
         sComponentToId.put(ThemesColumns.MODIFIES_OVERLAYS, R.id.chk_overlays);
+        sComponentToId.put(ThemesColumns.MODIFIES_STATUS_BAR, R.id.chk_status_bar);
+        sComponentToId.put(ThemesColumns.MODIFIES_NAVIGATION_BAR, R.id.chk_nav_bar);
         sComponentToId.put(ThemesColumns.MODIFIES_BOOT_ANIM, R.id.chk_boot_anims);
         sComponentToId.put(ThemesColumns.MODIFIES_FONTS, R.id.chk_fonts);
         sComponentToId.put(ThemesColumns.MODIFIES_ICONS, R.id.chk_icons);
@@ -197,6 +202,14 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
             componentCheckbox.setOnCheckedChangeListener(mComponentCheckChangedListener);
         }
 
+        // Remove the nav bar checkbox if the user has hardware nav keys
+        if (!Utils.hasNavigationBar(getActivity())) {
+            View navBarCheck = v.findViewById(R.id.chk_nav_bar);
+            if (navBarCheck != null) {
+                navBarCheck.setVisibility(View.GONE);
+            }
+        }
+
         getLoaderManager().initLoader(LOADER_ID_THEME_INFO, null, this);
         getLoaderManager().initLoader(LOADER_ID_APPLIED_THEME, null, this);
         mService = (ThemeManager) getActivity().getSystemService(Context.THEME_SERVICE);
@@ -209,7 +222,8 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
         for (Map.Entry<String, CheckBox> entry : mComponentToCheckbox.entrySet()) {
             String component = entry.getKey();
             CheckBox checkbox = entry.getValue();
-            if (checkbox.isEnabled() && checkbox.isChecked()) {
+            if (checkbox.isEnabled() && checkbox.isChecked()
+                    && !mAppliedComponents.contains(component)) {
                 components.add(component);
             }
         }
@@ -370,7 +384,8 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
                 componentCheckbox.setVisibility(View.GONE);
             }
 
-            if (shouldComponentBeEnabled(componentName, componentIncludedInTheme)) {
+            if (shouldComponentBeEnabled(componentName, componentIncludedInTheme)
+                    && !mAppliedComponents.contains(componentName)) {
                 componentCheckbox.setEnabled(true);
             } else {
                 componentCheckbox.setEnabled(false);
@@ -378,6 +393,8 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
 
             if (componentIncludedInTheme) {
                 supportedComponents.add(componentName);
+            } else {
+                componentCheckbox.setVisibility(View.GONE);
             }
         }
 
@@ -406,14 +423,15 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
 
     private void loadAppliedInfo(Cursor cursor) {
         mAppliedThemeCursor = cursor;
+        refreshAppliedComponents();
         refreshChecksForCheckboxes();
         refreshApplyButton();
     }
 
-    private void refreshChecksForCheckboxes() {
+    private void refreshAppliedComponents() {
+        mAppliedComponents.clear();
 
         //Determine which components are applied
-        List<String> appliedComponents = new ArrayList<String>();
         if (mAppliedThemeCursor != null) {
             mAppliedThemeCursor.moveToPosition(-1);
             while (mAppliedThemeCursor.moveToNext()) {
@@ -422,18 +440,34 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
                 String pkg = mAppliedThemeCursor.getString(mAppliedThemeCursor.getColumnIndex(MixnMatchColumns.COL_VALUE));
 
                 if (pkg.equals(mPkgName)) {
-                    appliedComponents.add(component);
+                    mAppliedComponents.add(component);
                 }
             }
         }
+    }
+
+    private void refreshChecksForCheckboxes() {
+        LinearLayout ll = (LinearLayout) getActivity().findViewById(R.id.details_applied);
+        ll.setVisibility(View.GONE);
+
+        boolean allApplied = true;
 
         //Apply checks
         for (Map.Entry<String, CheckBox> entry : mComponentToCheckbox.entrySet()) {
             String componentName = entry.getKey();
             CheckBox componentCheckbox = entry.getValue();
 
-            if (appliedComponents.contains(componentName)) {
+            if (mAppliedComponents.contains(componentName)) {
                 componentCheckbox.setChecked(true);
+                componentCheckbox.setEnabled(false);
+                ((LinearLayout) componentCheckbox.getParent()).removeView(componentCheckbox);
+                ll.addView(componentCheckbox);
+                ll.setVisibility(View.VISIBLE);
+            } else {
+                //Ignore unavailable components
+                if (componentCheckbox.getVisibility() != View.GONE) {
+                    allApplied = false;
+                }
             }
             if (mLoadInitialCheckboxStates) {
                 mInitialCheckboxStates.put(componentCheckbox.getId(),
@@ -441,6 +475,10 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
             }
             mCurrentCheckboxStates.put(componentCheckbox.getId(), componentCheckbox.isChecked());
         }
+
+        //Hide available column if it is empty
+        ll = (LinearLayout) getActivity().findViewById(R.id.details);
+        ll.setVisibility(allApplied ? View.GONE : View.VISIBLE);
     }
 
     private void refreshApplyButton() {
@@ -542,6 +580,14 @@ public class ChooserDetailFragment extends Fragment implements LoaderManager.Loa
                 mPreviewList.remove(ThemesColumns.MODIFIES_RINGTONES);
             } else if (mSupportedComponents.contains(ThemesColumns.MODIFIES_NOTIFICATIONS)) {
                 mPreviewList.remove(ThemesColumns.MODIFIES_RINGTONES);
+            }
+
+            // Currently no previews for status bar and navigation bar
+            if (mSupportedComponents.contains(ThemesColumns.MODIFIES_STATUS_BAR)) {
+                mPreviewList.remove(ThemesColumns.MODIFIES_STATUS_BAR);
+            }
+            if (mSupportedComponents.contains(ThemesColumns.MODIFIES_NAVIGATION_BAR)) {
+                mPreviewList.remove(ThemesColumns.MODIFIES_NAVIGATION_BAR);
             }
 
             // Sort supported components so that the previews are more reasonable
